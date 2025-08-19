@@ -6,5 +6,9 @@ import (
 )
 
 type UserService interface {
-	CreateUser(req *request.CreateUserRequest) (*models.User, error)
+	CreateUser(req *request.CreateUserRequestDTO) (*models.User, error)
+	GetUserByUsername(username string) (*models.User, error)
+	GetUserByID(id int) (*models.User, error)
+	GetUserByEmail(email string) (*models.User, error)
+	Deactivate(userID int) error
 }

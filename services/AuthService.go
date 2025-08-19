@@ -1,1 +1,12 @@
 package services
+
+import (
+	"user_management_service/dto/request"
+	"user_management_service/dto/response"
+	"user_management_service/models"
+)
+
+type AuthService interface {
+	Register(req request.CreateUserRequestDTO) (*models.User, error) // Registration flow
+	Login(req request.LoginRequestDTO) (*response.LoginResponseDTO, error)
+}

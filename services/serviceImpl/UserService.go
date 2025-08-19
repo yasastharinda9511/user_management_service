@@ -18,7 +18,7 @@ func NewUserService(userRepo repository.UserRepository) services.UserService {
 	return &UserService{userRepo}
 }
 
-func (s *UserService) CreateUser(req *request.CreateUserRequest) (*models.User, error) {
+func (s *UserService) CreateUser(req *request.CreateUserRequestDTO) (*models.User, error) {
 
 	hashedPassword, err := utils.HashPassword(req.Password, 12)
 	if err != nil {
@@ -48,4 +48,44 @@ func (s *UserService) CreateUser(req *request.CreateUserRequest) (*models.User, 
 	// Clear password hash before returning
 	user.PasswordHash = ""
 	return user, nil
+}
+
+func (s *UserService) GetUserByUsername(username string) (*models.User, error) {
+	user, err := s.userRepo.GetByUsername(username)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by username: %w", err)
+	}
+
+	return user, nil
+}
+
+func (s *UserService) GetUserByID(id int) (*models.User, error) {
+	user, err := s.userRepo.GetByID(id)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by username: %w", err)
+	}
+
+	return user, nil
+}
+
+func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
+	user, err := s.userRepo.GetByEmail(email)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by username: %w", err)
+	}
+
+	return user, nil
+}
+
+func (s *UserService) Deactivate(userID int) error {
+	err := s.userRepo.Deactivate(userID)
+
+	if err != nil {
+		return fmt.Errorf("failed to get user by username: %w", err)
+	}
+
+	return nil
 }

@@ -62,9 +62,10 @@ func main() {
 	//protected.Use(authMiddleware.Authenticate)
 
 	protected.HandleFunc("/users", userHandler.CreateUser).Methods("POST")
-	//protected.HandleFunc("/users/{id:[0-9]+}", userHandler.GetUser).Methods("GET")
-	//protected.HandleFunc("/users/{id:[0-9]+}", userHandler.UpdateUser).Methods("PUT")
-	//protected.HandleFunc("/users/{id:[0-9]+}/deactivate", userHandler.DeactivateUser).Methods("PUT")
+	protected.HandleFunc("/users/username/{username:[a-zA-Z0-9._-]+}", userHandler.GetUserByUsername).Methods("GET")
+	protected.HandleFunc("/users/email/{email:[a-zA-Z0-9._%+-@]+}", userHandler.GetUserByEmail).Methods("GET")
+	protected.HandleFunc("/users/id/{id:[0-9]+}", userHandler.GetUserByUserID).Methods("GET")
+	protected.HandleFunc("/users/{id:[0-9]+}/deactivate", userHandler.DeactivateUser).Methods("PUT")
 	//protected.HandleFunc("/auth/change-password", authHandler.ChangePassword).Methods("POST")
 	//protected.HandleFunc("/auth/logout", authHandler.Logout).Methods("POST")
 
