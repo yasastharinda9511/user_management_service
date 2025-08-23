@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"user_management_service/utils"
 )
 
 type Config struct {
@@ -18,7 +19,7 @@ type Config struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		Port:          getEnv("PORT", "8080"),
-		JWTSecret:     getEnv("JWT_SECRET", "your-super-secret-jwt-key-change-this-in-production"),
+		JWTSecret:     getEnv("JWT_SECRET", utils.GenerateSecureJWTSecret()),
 		TokenDuration: getEnvAsInt("TOKEN_DURATION", 24),
 		BCryptCost:    getEnvAsInt("BCRYPT_COST", 12),
 		Environment:   getEnv("ENVIRONMENT", "development"),
@@ -35,6 +36,7 @@ func Load() (*Config, error) {
 		dbUser, dbPassword, dbHost, dbPort, dbName)
 
 	// Validate required fields
+	fmt.Println(cfg.JWTSecret)
 	if cfg.JWTSecret == "your-super-secret-jwt-key-change-this-in-production" && cfg.Environment == "production" {
 		return nil, fmt.Errorf("JWT_SECRET must be set in production environment")
 	}
