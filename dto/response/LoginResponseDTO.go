@@ -6,7 +6,9 @@ import (
 )
 
 type LoginResponseDTO struct {
-	Token     string       `json:"token"`
-	User      *models.User `json:"user"`
-	ExpiresAt time.Time    `json:"expires_at"`
+	Token     string        `json:"token"`
+	User      *models.User  `json:"user"`
+	ExpiresAt time.Time     `json:"expires_at"`
+	SessionID int64         `json:"session_id"`
+	Roles     []models.Role `json:"roles"`
 }

@@ -16,9 +16,15 @@ import (
 
 type AuthService struct {
 	userRepo      repository.UserRepository
+	sessionRepo   repository.SessionRepository
+	rolesRepo     repository.RoleRepository
 	jwtSecret     string
 	tokenDuration int
 	bcryptCost    int
+}
+
+func NewAuthService(userRepo repository.UserRepository, sessionRepo repository.SessionRepository, userRolesRepo repository.RoleRepository, jwtSecret string, tokenDuration int, bcryptCost int) services.AuthService {
+	return &AuthService{userRepo: userRepo, sessionRepo: sessionRepo, rolesRepo: userRolesRepo, jwtSecret: jwtSecret, tokenDuration: tokenDuration, bcryptCost: bcryptCost}
 }
 
 func (a AuthService) Register(req request.CreateUserRequestDTO) (*models.User, error) {
@@ -90,18 +96,41 @@ func (a AuthService) Login(req request.LoginRequestDTO) (*response.LoginResponse
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
+	session := &models.Session{
+		UserID:    user.ID,
+		TokenHash: utils.HashSHA256(tokenString),
+		ExpiresAt: expiresAt,
+		CreatedAt: time.Now(),
+		IsRevoked: false,
+	}
+	sessionID, err := a.sessionRepo.Create(session)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+
+	go func() {
+		if err := a.sessionRepo.CleanupExpired(user.ID); err != nil {
+			fmt.Printf("Warning: failed to cleanup expired sessions for user %d: %v\n", user.ID, err)
+		}
+	}()
+
+	roles, err := a.rolesRepo.GetUserRoles(user.ID)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get roles for user %d: %w", user.ID, err)
+	}
+
 	loginResponse := response.LoginResponseDTO{
 		Token:     tokenString,
 		User:      user,
 		ExpiresAt: expiresAt,
+		SessionID: sessionID,
+		Roles:     roles,
 	}
 
 	return &loginResponse, nil
 
-}
-
-func NewAuthService(userRepo repository.UserRepository, jwtSecret string, tokenDuration int, bcryptCost int) services.AuthService {
-	return &AuthService{userRepo: userRepo, jwtSecret: jwtSecret, tokenDuration: tokenDuration, bcryptCost: bcryptCost}
 }
 
 func (a AuthService) generateJWT(user *models.User) (string, time.Time, error) {

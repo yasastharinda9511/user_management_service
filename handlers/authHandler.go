@@ -50,5 +50,34 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Parse request body
+	var req request.CreateUserRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid JSON format"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Validate request
+	if req.Email == "" || req.Password == "" {
+		http.Error(w, `{"error": "Email and password are required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Call service
+	user, err := h.auth.Register(req)
+	if err != nil {
+		// You might want to handle different error types differently
+		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Return success response
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "User created successfully",
+		"user":    user,
+	})
 
 }

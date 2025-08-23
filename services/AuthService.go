@@ -7,6 +7,6 @@ import (
 )
 
 type AuthService interface {
-	Register(req request.CreateUserRequestDTO) (*models.User, error) // Registration flow
+	Register(req request.CreateUserRequestDTO) (*models.User, error)
 	Login(req request.LoginRequestDTO) (*response.LoginResponseDTO, error)
 }
