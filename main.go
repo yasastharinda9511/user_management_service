@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-
 	"log"
 	"net/http"
 	"user_management_service/cofig"
@@ -37,13 +36,17 @@ func main() {
 
 	// Initialize repositories
 	userRepo := repositoryImpl.NewUserRepository(db)
+	sessionRepo := repositoryImpl.NewSessionRepository(db)
+	roleRepo := repositoryImpl.NewRoleRepository(db)
+	permissionRepo := repositoryImpl.NewPermissionRepository(db)
 
 	// Initialize services
 	userService := serviceImpl.NewUserService(userRepo)
+	authService := serviceImpl.NewAuthService(userRepo, sessionRepo, roleRepo, permissionRepo, cfg.JWTSecret, cfg.TokenDuration, 12)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
-	//authHandler := handlers.NewAuthHandler(authService)
+	authHandler := handlers.NewAuthHandler(authService)
 
 	// Setup middleware
 	//authMiddleware := handlers.NewAuthMiddleware(authService)
@@ -61,12 +64,15 @@ func main() {
 	protected := api.PathPrefix("/user_management").Subrouter()
 	//protected.Use(authMiddleware.Authenticate)
 
-	protected.HandleFunc("/users", userHandler.CreateUser).Methods("POST")
-	//protected.HandleFunc("/users/{id:[0-9]+}", userHandler.GetUser).Methods("GET")
-	//protected.HandleFunc("/users/{id:[0-9]+}", userHandler.UpdateUser).Methods("PUT")
-	//protected.HandleFunc("/users/{id:[0-9]+}/deactivate", userHandler.DeactivateUser).Methods("PUT")
+	protected.HandleFunc("/users/username/{username:[a-zA-Z0-9._-]+}", userHandler.GetUserByUsername).Methods("GET")
+	protected.HandleFunc("/users/email/{email:[a-zA-Z0-9._%+-@]+}", userHandler.GetUserByEmail).Methods("GET")
+	protected.HandleFunc("/users/id/{id:[0-9]+}", userHandler.GetUserByUserID).Methods("GET")
+	protected.HandleFunc("/users/{id:[0-9]+}/deactivate", userHandler.DeactivateUser).Methods("PUT")
 	//protected.HandleFunc("/auth/change-password", authHandler.ChangePassword).Methods("POST")
 	//protected.HandleFunc("/auth/logout", authHandler.Logout).Methods("POST")
+
+	protected.HandleFunc("/users/register", authHandler.Register).Methods("POST")
+	protected.HandleFunc("/users/login", authHandler.Login).Methods("POST")
 
 	// Start server
 	log.Printf("Server starting on port %s", cfg.Port)
