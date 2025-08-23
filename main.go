@@ -38,10 +38,11 @@ func main() {
 	userRepo := repositoryImpl.NewUserRepository(db)
 	sessionRepo := repositoryImpl.NewSessionRepository(db)
 	roleRepo := repositoryImpl.NewRoleRepository(db)
+	permissionRepo := repositoryImpl.NewPermissionRepository(db)
 
 	// Initialize services
 	userService := serviceImpl.NewUserService(userRepo)
-	authService := serviceImpl.NewAuthService(userRepo, sessionRepo, roleRepo, cfg.JWTSecret, cfg.TokenDuration, 12)
+	authService := serviceImpl.NewAuthService(userRepo, sessionRepo, roleRepo, permissionRepo, cfg.JWTSecret, cfg.TokenDuration, 12)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)

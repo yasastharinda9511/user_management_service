@@ -15,16 +15,17 @@ import (
 )
 
 type AuthService struct {
-	userRepo      repository.UserRepository
-	sessionRepo   repository.SessionRepository
-	rolesRepo     repository.RoleRepository
-	jwtSecret     string
-	tokenDuration int
-	bcryptCost    int
+	userRepo       repository.UserRepository
+	sessionRepo    repository.SessionRepository
+	rolesRepo      repository.RoleRepository
+	permissionRepo repository.PermissionRepository
+	jwtSecret      string
+	tokenDuration  int
+	bcryptCost     int
 }
 
-func NewAuthService(userRepo repository.UserRepository, sessionRepo repository.SessionRepository, userRolesRepo repository.RoleRepository, jwtSecret string, tokenDuration int, bcryptCost int) services.AuthService {
-	return &AuthService{userRepo: userRepo, sessionRepo: sessionRepo, rolesRepo: userRolesRepo, jwtSecret: jwtSecret, tokenDuration: tokenDuration, bcryptCost: bcryptCost}
+func NewAuthService(userRepo repository.UserRepository, sessionRepo repository.SessionRepository, userRolesRepo repository.RoleRepository, permissionRepo repository.PermissionRepository, jwtSecret string, tokenDuration int, bcryptCost int) services.AuthService {
+	return &AuthService{userRepo: userRepo, sessionRepo: sessionRepo, rolesRepo: userRolesRepo, permissionRepo: permissionRepo, jwtSecret: jwtSecret, tokenDuration: tokenDuration, bcryptCost: bcryptCost}
 }
 
 func (a AuthService) Register(req request.CreateUserRequestDTO) (*models.User, error) {
@@ -121,12 +122,19 @@ func (a AuthService) Login(req request.LoginRequestDTO) (*response.LoginResponse
 		return nil, fmt.Errorf("failed to get roles for user %d: %w", user.ID, err)
 	}
 
+	permissions, err := a.permissionRepo.GetUserPermissions(user.ID)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get permissions for user %d: %w", user.ID, err)
+	}
+
 	loginResponse := response.LoginResponseDTO{
-		Token:     tokenString,
-		User:      user,
-		ExpiresAt: expiresAt,
-		SessionID: sessionID,
-		Roles:     roles,
+		Token:       tokenString,
+		User:        user,
+		ExpiresAt:   expiresAt,
+		SessionID:   sessionID,
+		Roles:       roles,
+		Permissions: permissions,
 	}
 
 	return &loginResponse, nil
