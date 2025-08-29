@@ -45,7 +45,7 @@ func (r *SessionRepository) CleanupExpired(userID int) error {
 func (r *SessionRepository) GetByTokenHash(tokenHash string) (*models.Session, error) {
 	query := `
         SELECT id, user_id, token_hash, expires_at, created_at, is_revoked 
-        FROM sessions 
+        FROM user_sessions 
         WHERE token_hash = $1 AND is_revoked = false AND expires_at > $2
     `
 
@@ -71,12 +71,12 @@ func (r *SessionRepository) GetByTokenHash(tokenHash string) (*models.Session, e
 
 func (r *SessionRepository) RevokeSession(sessionID int) error {
 	query := `
-        UPDATE sessions 
-        SET is_revoked = true, updated_at = $1 
-        WHERE id = $2
+        UPDATE user_sessions 
+        SET is_revoked = true 
+        WHERE id = $1
     `
 
-	result, err := r.db.Exec(query, time.Now(), sessionID)
+	result, err := r.db.Exec(query, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to revoke session: %w", err)
 	}

@@ -3,7 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"user_management_service/dto/request"
+	"user_management_service/dto/response"
 	"user_management_service/services"
 )
 
@@ -103,5 +105,57 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		"message": "User created successfully",
 		"user":    user,
 	})
+
+}
+
+func (h *AuthHandler) Introspect(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
+
+	authHeader := r.Header.Get("Authorization")
+
+	// Check if Authorization header is present
+	if authHeader == "" {
+		// Return inactive token response
+		res := response.IntrospectResponse{
+			Active: false,
+			User:   nil,
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// Extract the token (remove "Bearer " prefix)
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	token = strings.TrimSpace(token)
+
+	// Check if token is empty after removing Bearer prefix
+	if token == "" || token == authHeader {
+		// Token doesn't have Bearer prefix or is empty
+		res := response.IntrospectResponse{
+			Active: false,
+			User:   nil,
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// Call your introspection service
+	introspectResponse, err := h.auth.Introspect(token)
+	if err != nil {
+		res := response.IntrospectResponse{
+			Active: false,
+			User:   nil,
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	// Return the response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(introspectResponse)
 
 }

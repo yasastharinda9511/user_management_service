@@ -167,14 +167,14 @@ func (a AuthService) Logout(req request.LogoutRequestDTO) error {
 	}
 
 	// Extract user ID from token claims
-	userID, ok := claims["UserID"].(int)
+	userID, ok := claims["UserID"].(float64)
 	if !ok {
 		return fmt.Errorf("invalid user ID in token")
 	}
 
+	intUserID := int(userID)
 	// Hash the token to match what's stored in the database
 	tokenHash := utils.HashSHA256(tokenString)
-
 	// Find and revoke the session
 	session, err := a.sessionRepo.GetByTokenHash(tokenHash)
 	if err != nil {
@@ -182,7 +182,7 @@ func (a AuthService) Logout(req request.LogoutRequestDTO) error {
 	}
 
 	// Verify the session belongs to the user
-	if session.UserID != userID {
+	if session.UserID != intUserID {
 		return fmt.Errorf("unauthorized")
 	}
 
@@ -219,4 +219,49 @@ func (a AuthService) generateJWT(user *models.User) (string, time.Time, error) {
 
 	return tokenString, expirationTime, nil
 
+}
+
+func (a AuthService) Introspect(tokenString string) (*response.IntrospectResponse, error) {
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Make sure the signing method is what you expect
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(a.jwtSecret), nil // Your JWT secret key
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid token: %w", err)
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	userID, ok := claims["UserID"].(float64)
+
+	if !ok {
+		return nil, fmt.Errorf("invalid user ID in token")
+	}
+
+	tokenHash := utils.HashSHA256(tokenString)
+
+	session, err := a.sessionRepo.GetByTokenHash(tokenHash)
+	if err != nil || session == nil {
+		return nil, fmt.Errorf("session not found")
+	}
+
+	user, err := a.userRepo.GetByID(int(userID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	introspectResponse := response.IntrospectResponse{
+		Active: true,
+		User:   user,
+	}
+
+	return &introspectResponse, nil
 }
