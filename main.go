@@ -74,6 +74,7 @@ func main() {
 	protected.HandleFunc("/users/register", authHandler.Register).Methods("POST")
 	protected.HandleFunc("/users/login", authHandler.Login).Methods("POST")
 	protected.HandleFunc("/users/logout", authHandler.Logout).Methods("POST")
+	protected.HandleFunc("/introspect", authHandler.Introspect).Methods("GET")
 
 	// Start server
 	log.Printf("Server starting on port %s", cfg.Port)
