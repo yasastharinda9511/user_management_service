@@ -141,6 +141,59 @@ func (a AuthService) Login(req request.LoginRequestDTO) (*response.LoginResponse
 
 }
 
+func (a AuthService) Logout(req request.LogoutRequestDTO) error {
+	// Extract token from request (usually from Authorization header)
+	tokenString := req.Token
+	if tokenString == "" {
+		return fmt.Errorf("token is required")
+	}
+
+	// Parse and validate the JWT token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Make sure the signing method is what you expect
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(a.jwtSecret), nil // Your JWT secret key
+	})
+
+	if err != nil {
+		return fmt.Errorf("invalid token: %w", err)
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return fmt.Errorf("invalid token claims")
+	}
+
+	// Extract user ID from token claims
+	userID, ok := claims["UserID"].(int)
+	if !ok {
+		return fmt.Errorf("invalid user ID in token")
+	}
+
+	// Hash the token to match what's stored in the database
+	tokenHash := utils.HashSHA256(tokenString)
+
+	// Find and revoke the session
+	session, err := a.sessionRepo.GetByTokenHash(tokenHash)
+	if err != nil {
+		return fmt.Errorf("session not found")
+	}
+
+	// Verify the session belongs to the user
+	if session.UserID != userID {
+		return fmt.Errorf("unauthorized")
+	}
+
+	// Revoke the session
+	if err := a.sessionRepo.RevokeSession(session.ID); err != nil {
+		return fmt.Errorf("failed to revoke session: %w", err)
+	}
+
+	return nil
+}
+
 func (a AuthService) generateJWT(user *models.User) (string, time.Time, error) {
 
 	expirationTime := time.Now().Add(time.Duration(a.tokenDuration) * time.Hour)
@@ -158,6 +211,7 @@ func (a AuthService) generateJWT(user *models.User) (string, time.Time, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 	tokenString, err := token.SignedString([]byte(a.jwtSecret))
 	if err != nil {
 		return "", time.Time{}, err

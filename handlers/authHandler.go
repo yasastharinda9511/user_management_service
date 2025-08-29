@@ -47,6 +47,30 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
+	w.Header().Set("Content-Type", "application/json")
+
+	var req request.LogoutRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid JSON format"}`, http.StatusBadRequest)
+	}
+
+	if req.Token == "" {
+		http.Error(w, `{"error": "Wrong token"}`, http.StatusBadRequest)
+		return
+	}
+
+	err := h.auth.Logout(req)
+
+	if err != nil {
+		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "User logged out successfully",
+	})
+
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {

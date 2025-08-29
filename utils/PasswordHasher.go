@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
+	"log"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -31,4 +34,14 @@ func CheckPasswordHash(password, hash string) bool {
 func HashSHA256(input string) string {
 	hash := sha256.Sum256([]byte(input))
 	return fmt.Sprintf("%x", hash)
+}
+
+func GenerateSecureJWTSecret() string {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		log.Fatal(err)
+	}
+	// Use StdEncoding instead of URLEncoding
+	base64Secret := base64.StdEncoding.EncodeToString(bytes)
+	return base64Secret
 }
