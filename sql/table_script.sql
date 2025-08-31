@@ -70,9 +70,6 @@ CREATE TABLE password_reset_tokens (
 CREATE INDEX idx_token ON password_reset_tokens(token);
 CREATE INDEX idx_token_user_id ON password_reset_tokens(user_id);
 
-
-
-
 CREATE TABLE permissions (
                              id SERIAL PRIMARY KEY,
                              name VARCHAR(100) UNIQUE NOT NULL,
@@ -92,10 +89,6 @@ CREATE TABLE role_permissions (
                                   FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
                                   UNIQUE(role_id, permission_id)
 );
-
-
-INSERT INTO user_roles (user_id, role_id) VALUES
-    (13, 1);
 
 INSERT INTO roles (name, description) VALUES
                                           ('admin', 'Administrator with full access'),
