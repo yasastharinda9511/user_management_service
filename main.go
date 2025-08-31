@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"user_management_service/cofig"
 	"user_management_service/handlers"
+	"user_management_service/middleware"
 	"user_management_service/repository/repositoryImpl"
 	"user_management_service/services/serviceImpl"
 
@@ -49,30 +50,27 @@ func main() {
 	authHandler := handlers.NewAuthHandler(authService)
 
 	// Setup middleware
-	//authMiddleware := handlers.NewAuthMiddleware(authService)
+	authMiddleware := middleware.NewAuthMiddleware(authService)
 
 	// Setup routes
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api").Subrouter()
 
 	// Public routes
-	//api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
-	//api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
+	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
 	api.HandleFunc("/health", healthCheck).Methods("GET")
 
 	// Protected routes
 	protected := api.PathPrefix("/user_management").Subrouter()
-	//protected.Use(authMiddleware.Authenticate)
+	protected.Use(authMiddleware.Authenticate)
 
 	protected.HandleFunc("/users/username/{username:[a-zA-Z0-9._-]+}", userHandler.GetUserByUsername).Methods("GET")
 	protected.HandleFunc("/users/email/{email:[a-zA-Z0-9._%+-@]+}", userHandler.GetUserByEmail).Methods("GET")
 	protected.HandleFunc("/users/id/{id:[0-9]+}", userHandler.GetUserByUserID).Methods("GET")
 	protected.HandleFunc("/users/{id:[0-9]+}/deactivate", userHandler.DeactivateUser).Methods("PUT")
 	//protected.HandleFunc("/auth/change-password", authHandler.ChangePassword).Methods("POST")
-	//protected.HandleFunc("/auth/logout", authHandler.Logout).Methods("POST")
 
-	protected.HandleFunc("/users/register", authHandler.Register).Methods("POST")
-	protected.HandleFunc("/users/login", authHandler.Login).Methods("POST")
 	protected.HandleFunc("/users/logout", authHandler.Logout).Methods("POST")
 	protected.HandleFunc("/introspect", authHandler.Introspect).Methods("GET")
 
