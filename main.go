@@ -75,8 +75,9 @@ func main() {
 	protected.HandleFunc("/introspect", authHandler.Introspect).Methods("GET")
 
 	// Start server
+	cors := config.CorsConfig{cfg.AllowedOrigins}
 	log.Printf("Server starting on port %s", cfg.Port)
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, r))
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, cors.WithCORS(r)))
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {

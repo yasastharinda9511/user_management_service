@@ -4,25 +4,28 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"user_management_service/utils"
 )
 
 type Config struct {
-	Port          string
-	DatabaseURL   string
-	JWTSecret     string
-	TokenDuration int // in hours
-	BCryptCost    int
-	Environment   string
+	Port           string
+	DatabaseURL    string
+	JWTSecret      string
+	TokenDuration  int // in hours
+	BCryptCost     int
+	Environment    string
+	AllowedOrigins []string
 }
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:          getEnv("PORT", "8080"),
-		JWTSecret:     getEnv("JWT_SECRET", utils.GenerateSecureJWTSecret()),
-		TokenDuration: getEnvAsInt("TOKEN_DURATION", 24),
-		BCryptCost:    getEnvAsInt("BCRYPT_COST", 12),
-		Environment:   getEnv("ENVIRONMENT", "development"),
+		Port:           getEnv("PORT", "8080"),
+		JWTSecret:      getEnv("JWT_SECRET", utils.GenerateSecureJWTSecret()),
+		TokenDuration:  getEnvAsInt("TOKEN_DURATION", 24),
+		BCryptCost:     getEnvAsInt("BCRYPT_COST", 12),
+		Environment:    getEnv("ENVIRONMENT", "development"),
+		AllowedOrigins: getEnvAsSlice("ALLOWED_ORIGINS", []string{"*"}),
 	}
 
 	// Build database URL
@@ -58,4 +61,32 @@ func getEnvAsInt(key string, fallback int) int {
 		}
 	}
 	return fallback
+}
+
+func getEnvAsSlice(key string, fallback []string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	// Handle single wildcard
+	if value == "*" {
+		return []string{"*"}
+	}
+
+	// Split by comma and clean up
+	origins := strings.Split(value, ",")
+	var result []string
+	for _, origin := range origins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+
+	if len(result) == 0 {
+		return fallback
+	}
+
+	return result
 }
