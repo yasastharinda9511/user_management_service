@@ -13,10 +13,10 @@ type PermissionRepository struct {
 func (p PermissionRepository) GetUserPermissions(userID int) ([]models.Permission, error) {
 	query := `
         SELECT DISTINCT p.id, p.name, p.resource, p.action, p.description, p.created_at
-        FROM user_roles ur
-        JOIN roles r ON ur.role_id = r.id
-        JOIN role_permissions rp ON r.id = rp.role_id
-        JOIN permissions p ON rp.permission_id = p.id
+        FROM userManagement.user_roles ur
+        JOIN userManagement.roles r ON ur.role_id = r.id
+        JOIN userManagement.role_permissions rp ON r.id = rp.role_id
+        JOIN userManagement.permissions p ON rp.permission_id = p.id
         WHERE ur.user_id = $1
         ORDER BY p.resource, p.action, p.name`
 

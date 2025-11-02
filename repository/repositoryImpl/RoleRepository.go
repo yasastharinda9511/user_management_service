@@ -14,8 +14,8 @@ func (r RolesRepository) GetUserRoles(userID int) ([]models.Role, error) {
 
 	query := `
     SELECT r.id, r.name, r.description, r.created_at
-    FROM user_roles ur
-    JOIN roles r ON ur.role_id = r.id
+    FROM userManagement.user_roles ur
+    JOIN userManagement.roles r ON ur.role_id = r.id
     WHERE ur.user_id = $1`
 
 	rows, err := r.db.Query(query, userID)

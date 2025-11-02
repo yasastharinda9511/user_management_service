@@ -20,7 +20,7 @@ func NewSessionRepository(db *sql.DB) repository.SessionRepository {
 func (r *SessionRepository) Create(session *models.Session) (int64, error) {
 
 	query := `
-        INSERT INTO user_sessions (user_id, token_hash, expires_at, created_at, is_revoked)
+        INSERT INTO userManagement.user_sessions (user_id, token_hash, expires_at, created_at, is_revoked)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id`
 
@@ -37,15 +37,15 @@ func (r *SessionRepository) Create(session *models.Session) (int64, error) {
 }
 
 func (r *SessionRepository) CleanupExpired(userID int) error {
-	query := `DELETE FROM user_sessions WHERE user_id = $1 AND expires_at < NOW()`
+	query := `DELETE FROM userManagement.user_sessions WHERE user_id = $1 AND expires_at < NOW()`
 	_, err := r.db.Exec(query, userID)
 	return err
 }
 
 func (r *SessionRepository) GetByTokenHash(tokenHash string) (*models.Session, error) {
 	query := `
-        SELECT id, user_id, token_hash, expires_at, created_at, is_revoked 
-        FROM user_sessions 
+        SELECT id, user_id, token_hash, expires_at, created_at, is_revoked
+        FROM userManagement.user_sessions
         WHERE token_hash = $1 AND is_revoked = false AND expires_at > $2
     `
 
@@ -71,8 +71,8 @@ func (r *SessionRepository) GetByTokenHash(tokenHash string) (*models.Session, e
 
 func (r *SessionRepository) RevokeSession(sessionID int) error {
 	query := `
-        UPDATE user_sessions 
-        SET is_revoked = true 
+        UPDATE userManagement.user_sessions
+        SET is_revoked = true
         WHERE id = $1
     `
 
@@ -95,12 +95,12 @@ func (r *SessionRepository) RevokeSession(sessionID int) error {
 
 func (r *SessionRepository) RevokeAllUserSessions(userID int) error {
 	query := `
-        UPDATE sessions 
-        SET is_revoked = true, updated_at = $1 
-        WHERE user_id = $2 AND is_revoked = false
+        UPDATE userManagement.user_sessions
+        SET is_revoked = true
+        WHERE user_id = $1 AND is_revoked = false
     `
 
-	_, err := r.db.Exec(query, time.Now(), userID)
+	_, err := r.db.Exec(query, userID)
 	if err != nil {
 		return fmt.Errorf("failed to revoke all user sessions: %w", err)
 	}
@@ -110,8 +110,8 @@ func (r *SessionRepository) RevokeAllUserSessions(userID int) error {
 
 func (r *SessionRepository) IsSessionValid(tokenHash string) bool {
 	query := `
-        SELECT COUNT(*) 
-        FROM sessions 
+        SELECT COUNT(*)
+        FROM userManagement.user_sessions
         WHERE token_hash = $1 AND is_revoked = false AND expires_at > $2
     `
 

@@ -1,4 +1,10 @@
-CREATE TABLE users (
+-- Create userManagement schema
+CREATE SCHEMA IF NOT EXISTS userManagement;
+
+-- Set search path for this session
+SET search_path TO userManagement, public;
+
+CREATE TABLE userManagement.users (
                        id SERIAL PRIMARY KEY,
                        username VARCHAR(50) UNIQUE NOT NULL,
                        email VARCHAR(100) UNIQUE NOT NULL,
@@ -14,15 +20,15 @@ CREATE TABLE users (
 );
 
 -- Create indexes for users table
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_created_at ON users(created_at);
-CREATE INDEX idx_users_active ON users(is_active);
+CREATE INDEX idx_users_username ON userManagement.users(username);
+CREATE INDEX idx_users_email ON userManagement.users(email);
+CREATE INDEX idx_users_created_at ON userManagement.users(created_at);
+CREATE INDEX idx_users_active ON userManagement.users(is_active);
 
 
 -- User sessions table for JWT token management
 -- Create the user_sessions table
-CREATE TABLE user_sessions (
+CREATE TABLE userManagement.user_sessions (
                                id SERIAL PRIMARY KEY,
                                user_id INT NOT NULL,
                                token_hash VARCHAR(255) NOT NULL,
@@ -30,33 +36,33 @@ CREATE TABLE user_sessions (
                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                is_revoked BOOLEAN DEFAULT FALSE,
 
-                               FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                               FOREIGN KEY (user_id) REFERENCES userManagement.users(id) ON DELETE CASCADE
 );
 
 -- Create indexes separately
-CREATE INDEX idx_user_id ON user_sessions(user_id);
-CREATE INDEX idx_token_hash ON user_sessions(token_hash);
-CREATE INDEX idx_expires_at ON user_sessions(expires_at);
+CREATE INDEX idx_user_id ON userManagement.user_sessions(user_id);
+CREATE INDEX idx_token_hash ON userManagement.user_sessions(token_hash);
+CREATE INDEX idx_expires_at ON userManagement.user_sessions(expires_at);
 
 
-CREATE TABLE roles (
+CREATE TABLE userManagement.roles (
                        id SERIAL PRIMARY KEY,
                        name VARCHAR(50) UNIQUE NOT NULL,
                        description TEXT,
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE user_roles (
+CREATE TABLE userManagement.user_roles (
                             user_id INT NOT NULL,
                             role_id INT NOT NULL,
                             assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
                             PRIMARY KEY (user_id, role_id),
-                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                            FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+                            FOREIGN KEY (user_id) REFERENCES userManagement.users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (role_id) REFERENCES userManagement.roles(id) ON DELETE CASCADE
 );
 
-CREATE TABLE password_reset_tokens (
+CREATE TABLE userManagement.password_reset_tokens (
                                        id SERIAL PRIMARY KEY,
                                        user_id INT NOT NULL,
                                        token VARCHAR(255) NOT NULL,
@@ -64,13 +70,13 @@ CREATE TABLE password_reset_tokens (
                                        used BOOLEAN DEFAULT FALSE,
                                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-                                       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                                       FOREIGN KEY (user_id) REFERENCES userManagement.users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_token ON password_reset_tokens(token);
-CREATE INDEX idx_token_user_id ON password_reset_tokens(user_id);
+CREATE INDEX idx_token ON userManagement.password_reset_tokens(token);
+CREATE INDEX idx_token_user_id ON userManagement.password_reset_tokens(user_id);
 
-CREATE TABLE permissions (
+CREATE TABLE userManagement.permissions (
                              id SERIAL PRIMARY KEY,
                              name VARCHAR(100) UNIQUE NOT NULL,
                              resource VARCHAR(50) NOT NULL,        -- e.g., 'users', 'orders', 'products'
@@ -79,23 +85,23 @@ CREATE TABLE permissions (
                              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE role_permissions (
+CREATE TABLE userManagement.role_permissions (
                                   id SERIAL PRIMARY KEY,
                                   role_id INT NOT NULL,
                                   permission_id INT NOT NULL,
                                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-                                  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
-                                  FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
+                                  FOREIGN KEY (role_id) REFERENCES userManagement.roles(id) ON DELETE CASCADE,
+                                  FOREIGN KEY (permission_id) REFERENCES userManagement.permissions(id) ON DELETE CASCADE,
                                   UNIQUE(role_id, permission_id)
 );
 
-INSERT INTO roles (name, description) VALUES
+INSERT INTO userManagement.roles (name, description) VALUES
                                           ('admin', 'Administrator with full access'),
                                           ('user', 'Regular user with basic access'),
                                           ('moderator', 'Moderator with limited admin access');
 
-INSERT INTO permissions (name, resource, action, description) VALUES
+INSERT INTO userManagement.permissions (name, resource, action, description) VALUES
                                                                   ('users.create', 'users', 'create', 'Create new user accounts'),
                                                                   ('users.read', 'users', 'read', 'View user profiles and information'),
                                                                   ('users.update', 'users', 'update', 'Update user profiles and information'),
@@ -104,10 +110,10 @@ INSERT INTO permissions (name, resource, action, description) VALUES
                                                                   ('users.reset_password', 'users', 'reset_password', 'Reset user passwords'),
                                                                   ('users.impersonate', 'users', 'impersonate', 'Login as another user');
 
-INSERT INTO role_permissions (role_id, permission_id)
+INSERT INTO userManagement.role_permissions (role_id, permission_id)
 SELECT
     r.id as role_id,
     p.id as permission_id
-FROM roles r
-         CROSS JOIN permissions p
+FROM userManagement.roles r
+         CROSS JOIN userManagement.permissions p
 WHERE r.name = 'admin';

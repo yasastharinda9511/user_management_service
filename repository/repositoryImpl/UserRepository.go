@@ -19,8 +19,8 @@ func NewUserRepository(db *sql.DB) repository.UserRepository {
 // Create creates a new user
 func (r *userRepository) Create(user *models.User) error {
 	query := `
-		INSERT INTO users (username, email, password_hash, first_name, last_name, phone) 
-		VALUES ($1, $2, $3, $4, $5, $6) 
+		INSERT INTO userManagement.users (username, email, password_hash, first_name, last_name, phone)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id`
 
 	fmt.Printf("\"New user ID: %s", user.Username)
@@ -47,7 +47,7 @@ func (r *userRepository) GetByID(id int) (*models.User, error) {
 	query := `
 		SELECT id, username, email, password_hash, first_name, last_name,
 		       phone, is_active, is_email_verified, created_at, updated_at, last_login
-		FROM users WHERE id = $1`
+		FROM userManagement.users WHERE id = $1`
 
 	user := &models.User{}
 	err := r.db.QueryRow(query, id).Scan(
@@ -71,7 +71,7 @@ func (r *userRepository) GetByUsername(username string) (*models.User, error) {
 	query := `
 		SELECT id, username, email, password_hash, first_name, last_name,
 		       phone, is_active, is_email_verified, created_at, updated_at, last_login
-		FROM users WHERE username = $1`
+		FROM userManagement.users WHERE username = $1`
 
 	user := &models.User{}
 	err := r.db.QueryRow(query, username).Scan(
@@ -95,7 +95,7 @@ func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 	query := `
 		SELECT id, username, email, password_hash, first_name, last_name,
 		       phone, is_active, is_email_verified, created_at, updated_at, last_login
-		FROM users WHERE email = $1`
+		FROM userManagement.users WHERE email = $1`
 
 	user := &models.User{}
 	err := r.db.QueryRow(query, email).Scan(
@@ -190,7 +190,7 @@ func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 // UpdateLastLogin updates the last login timestamp for a user
 
 func (r *userRepository) UpdateLastLogin(userID int) error {
-	query := `UPDATE users SET last_login = NOW() WHERE id = $1`
+	query := `UPDATE userManagement.users SET last_login = NOW() WHERE id = $1`
 	_, err := r.db.Exec(query, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update last login: %w", err)
@@ -200,7 +200,7 @@ func (r *userRepository) UpdateLastLogin(userID int) error {
 
 // Deactivate deactivates a user account
 func (r *userRepository) Deactivate(userID int) error {
-	query := `UPDATE users SET is_active = FALSE, updated_at = NOW() WHERE id = $1`
+	query := `UPDATE userManagement.users SET is_active = FALSE, updated_at = NOW() WHERE id = $1`
 	result, err := r.db.Exec(query, userID)
 	if err != nil {
 		return fmt.Errorf("failed to deactivate user: %w", err)
