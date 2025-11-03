@@ -53,28 +53,25 @@ func main() {
 	// Setup middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
-	// Setup routes
+	// Setup routes - All routes under /authapi/*
 	r := mux.NewRouter()
 	api := r.PathPrefix("/authapi").Subrouter()
 
-	// Public routes
-	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
-	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
-	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
+	// Public routes (no authentication required)
+	api.HandleFunc("/register", authHandler.Register).Methods("POST")
+	api.HandleFunc("/login", authHandler.Login).Methods("POST")
+	api.HandleFunc("/refresh", authHandler.RefreshToken).Methods("POST")
 	api.HandleFunc("/health", healthCheck).Methods("GET")
 
-	// Protected routes
-	protected := api.PathPrefix("/user_management").Subrouter()
-	protected.Use(authMiddleware.Authenticate)
+	// Protected routes (authentication required)
+	api.Handle("/logout", authMiddleware.Authenticate(http.HandlerFunc(authHandler.Logout))).Methods("POST")
+	api.Handle("/introspect", authMiddleware.Authenticate(http.HandlerFunc(authHandler.Introspect))).Methods("GET")
 
-	protected.HandleFunc("/users/username/{username:[a-zA-Z0-9._-]+}", userHandler.GetUserByUsername).Methods("GET")
-	protected.HandleFunc("/users/email/{email:[a-zA-Z0-9._%+-@]+}", userHandler.GetUserByEmail).Methods("GET")
-	protected.HandleFunc("/users/id/{id:[0-9]+}", userHandler.GetUserByUserID).Methods("GET")
-	protected.HandleFunc("/users/{id:[0-9]+}/deactivate", userHandler.DeactivateUser).Methods("PUT")
-	//protected.HandleFunc("/auth/change-password", authHandler.ChangePassword).Methods("POST")
-
-	protected.HandleFunc("/users/logout", authHandler.Logout).Methods("POST")
-	protected.HandleFunc("/introspect", authHandler.Introspect).Methods("GET")
+	// User management protected routes
+	api.Handle("/users/username/{username:[a-zA-Z0-9._-]+}", authMiddleware.Authenticate(http.HandlerFunc(userHandler.GetUserByUsername))).Methods("GET")
+	api.Handle("/users/email/{email:[a-zA-Z0-9._%+-@]+}", authMiddleware.Authenticate(http.HandlerFunc(userHandler.GetUserByEmail))).Methods("GET")
+	api.Handle("/users/id/{id:[0-9]+}", authMiddleware.Authenticate(http.HandlerFunc(userHandler.GetUserByUserID))).Methods("GET")
+	api.Handle("/users/{id:[0-9]+}/deactivate", authMiddleware.Authenticate(http.HandlerFunc(userHandler.DeactivateUser))).Methods("PUT")
 
 	// Start server
 	cors := config.CorsConfig{cfg.AllowedOrigins}
