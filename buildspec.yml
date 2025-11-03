@@ -56,7 +56,6 @@ phases:
     commands:
       - echo "[+] Pushing Docker image to ECR..."
       - docker push $ECR_URI/$IMAGE_REPO_NAME:$IMAGE_TAG
-      - docker push $ECR_URI/$IMAGE_REPO_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
       - echo "[+] Docker images pushed successfully"
       - echo "[+] Image URI - $ECR_URI/$IMAGE_REPO_NAME:$IMAGE_TAG"
       - echo "[+] Generating imagedefinitions.json for ECS deployment..."
