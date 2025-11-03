@@ -6,12 +6,12 @@ env:
     IMAGE_REPO_NAME: car-service/user-service        # 🟢 Your ECR repository name
     IMAGE_TAG: latest                               # Use 'latest' or '$CODEBUILD_RESOLVED_SOURCE_VERSION' for commit hash
     CONTAINER_NAME: user-management-container       # 🟢 Container name for ECS task definition
-    GO_VERSION: "1.23"                              # Go version
+    GO_VERSION: "1.25"                              # Go version
 
 phases:
   install:
     runtime-versions:
-      golang: 1.23                                  # Use Go runtime                              # Docker for building images
+      golang: 1.25                                  # Use Go runtime                              # Docker for building images
     commands:
       - echo "[+] Installing dependencies..."
       - go version
