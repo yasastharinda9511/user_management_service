@@ -54,7 +54,7 @@ func main() {
 
 	// Setup routes
 	r := mux.NewRouter()
-	api := r.PathPrefix("/api").Subrouter()
+	api := r.PathPrefix("/authapi").Subrouter()
 
 	// Public routes
 	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
