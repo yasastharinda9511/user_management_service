@@ -26,11 +26,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
 FROM alpine:latest
 
 # Install runtime dependencies
-RUN apk --no-cache add ca-certificates tzdata
-
-# Create non-root user
-RUN addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser
+RUN apk --no-cache add ca-certificates tzdata wget
 
 # Set working directory
 WORKDIR /app
@@ -38,21 +34,12 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /build/user_management_service .
 
-# Copy any required files (like SQL scripts if needed at runtime)
-# COPY --from=builder /build/sql ./sql
-
-# Change ownership
-RUN chown -R appuser:appuser /app
-
-# Switch to non-root user
-USER appuser
-
-# Expose port
+# Expose port 80
 EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/authapi/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:80/authapi/health || exit 1
 
-# Run the application
+# Run the application as root to allow binding to port 80
 CMD ["./user_management_service"]
