@@ -31,9 +31,12 @@ CREATE INDEX idx_users_active ON userManagement.users(is_active);
 CREATE TABLE userManagement.user_sessions (
                                id SERIAL PRIMARY KEY,
                                user_id INT NOT NULL,
-                               token_hash VARCHAR(255) NOT NULL,
-                               expires_at TIMESTAMP NOT NULL,
+                               access_token_hash VARCHAR(255) NOT NULL,
+                               access_token_expires_at TIMESTAMP NOT NULL,
+                               refresh_token_hash VARCHAR(255) NOT NULL,
+                               refresh_token_expires_at TIMESTAMP NOT NULL,
                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                               last_refreshed_at TIMESTAMP NULL,
                                is_revoked BOOLEAN DEFAULT FALSE,
 
                                FOREIGN KEY (user_id) REFERENCES userManagement.users(id) ON DELETE CASCADE
@@ -41,8 +44,10 @@ CREATE TABLE userManagement.user_sessions (
 
 -- Create indexes separately
 CREATE INDEX idx_user_id ON userManagement.user_sessions(user_id);
-CREATE INDEX idx_token_hash ON userManagement.user_sessions(token_hash);
-CREATE INDEX idx_expires_at ON userManagement.user_sessions(expires_at);
+CREATE INDEX idx_access_token_hash ON userManagement.user_sessions(access_token_hash);
+CREATE INDEX idx_refresh_token_hash ON userManagement.user_sessions(refresh_token_hash);
+CREATE INDEX idx_access_token_expires_at ON userManagement.user_sessions(access_token_expires_at);
+CREATE INDEX idx_refresh_token_expires_at ON userManagement.user_sessions(refresh_token_expires_at);
 
 
 CREATE TABLE userManagement.roles (

@@ -108,6 +108,36 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Parse request body to get refresh token
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid JSON format"}`, http.StatusBadRequest)
+		return
+	}
+
+	if req.RefreshToken == "" {
+		http.Error(w, `{"error": "Refresh token is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Call service to refresh the token
+	refreshResponse, err := h.auth.RefreshToken(req.RefreshToken)
+	if err != nil {
+		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusUnauthorized)
+		return
+	}
+
+	// Return new access token
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(refreshResponse)
+}
+
 func (h *AuthHandler) Introspect(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")

@@ -15,17 +15,27 @@ import (
 )
 
 type AuthService struct {
-	userRepo       repository.UserRepository
-	sessionRepo    repository.SessionRepository
-	rolesRepo      repository.RoleRepository
-	permissionRepo repository.PermissionRepository
-	jwtSecret      string
-	tokenDuration  int
-	bcryptCost     int
+	userRepo             repository.UserRepository
+	sessionRepo          repository.SessionRepository
+	rolesRepo            repository.RoleRepository
+	permissionRepo       repository.PermissionRepository
+	jwtSecret            string
+	accessTokenDuration  int // in minutes
+	refreshTokenDuration int // in days
+	bcryptCost           int
 }
 
-func NewAuthService(userRepo repository.UserRepository, sessionRepo repository.SessionRepository, userRolesRepo repository.RoleRepository, permissionRepo repository.PermissionRepository, jwtSecret string, tokenDuration int, bcryptCost int) services.AuthService {
-	return &AuthService{userRepo: userRepo, sessionRepo: sessionRepo, rolesRepo: userRolesRepo, permissionRepo: permissionRepo, jwtSecret: jwtSecret, tokenDuration: tokenDuration, bcryptCost: bcryptCost}
+func NewAuthService(userRepo repository.UserRepository, sessionRepo repository.SessionRepository, userRolesRepo repository.RoleRepository, permissionRepo repository.PermissionRepository, jwtSecret string, accessTokenDuration int, refreshTokenDuration int, bcryptCost int) services.AuthService {
+	return &AuthService{
+		userRepo:             userRepo,
+		sessionRepo:          sessionRepo,
+		rolesRepo:            userRolesRepo,
+		permissionRepo:       permissionRepo,
+		jwtSecret:            jwtSecret,
+		accessTokenDuration:  accessTokenDuration,
+		refreshTokenDuration: refreshTokenDuration,
+		bcryptCost:           bcryptCost,
+	}
 }
 
 func (a AuthService) Register(req request.CreateUserRequestDTO) (*models.User, error) {
@@ -92,17 +102,27 @@ func (a AuthService) Login(req request.LoginRequestDTO) (*response.LoginResponse
 		fmt.Printf("Warning: failed to update last login for user %d: %v\n", user.ID, err)
 	}
 
-	tokenString, expiresAt, err := a.generateJWT(user)
+	// Generate access token
+	accessToken, accessExpiresAt, err := a.generateToken(user, "access")
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate token: %w", err)
+		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
+	// Generate refresh token
+	refreshToken, refreshExpiresAt, err := a.generateToken(user, "refresh")
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	// Create session with both tokens
 	session := &models.Session{
-		UserID:    user.ID,
-		TokenHash: utils.HashSHA256(tokenString),
-		ExpiresAt: expiresAt,
-		CreatedAt: time.Now(),
-		IsRevoked: false,
+		UserID:                user.ID,
+		AccessTokenHash:       utils.HashSHA256(accessToken),
+		AccessTokenExpiresAt:  accessExpiresAt,
+		RefreshTokenHash:      utils.HashSHA256(refreshToken),
+		RefreshTokenExpiresAt: refreshExpiresAt,
+		CreatedAt:             time.Now(),
+		IsRevoked:             false,
 	}
 	sessionID, err := a.sessionRepo.Create(session)
 
@@ -129,12 +149,14 @@ func (a AuthService) Login(req request.LoginRequestDTO) (*response.LoginResponse
 	}
 
 	loginResponse := response.LoginResponseDTO{
-		Token:       tokenString,
-		User:        user,
-		ExpiresAt:   expiresAt,
-		SessionID:   sessionID,
-		Roles:       roles,
-		Permissions: permissions,
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  accessExpiresAt,
+		RefreshToken:          refreshToken,
+		RefreshTokenExpiresAt: refreshExpiresAt,
+		User:                  user,
+		SessionID:             sessionID,
+		Roles:                 roles,
+		Permissions:           permissions,
 	}
 
 	return &loginResponse, nil
@@ -166,8 +188,14 @@ func (a AuthService) Logout(req request.LogoutRequestDTO) error {
 		return fmt.Errorf("invalid token claims")
 	}
 
+	// Verify it's an access token (not a refresh token)
+	tokenType, ok := claims["token_type"].(string)
+	if !ok || tokenType != "access" {
+		return fmt.Errorf("logout requires access token")
+	}
+
 	// Extract user ID from token claims
-	userID, ok := claims["UserID"].(float64)
+	userID, ok := claims["user_id"].(float64)
 	if !ok {
 		return fmt.Errorf("invalid user ID in token")
 	}
@@ -194,14 +222,101 @@ func (a AuthService) Logout(req request.LogoutRequestDTO) error {
 	return nil
 }
 
-func (a AuthService) generateJWT(user *models.User) (string, time.Time, error) {
+// RefreshToken exchanges a valid refresh token for a new access token
+func (a AuthService) RefreshToken(refreshToken string) (*response.RefreshTokenResponseDTO, error) {
+	// Parse and validate the refresh token
+	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(a.jwtSecret), nil
+	})
 
-	expirationTime := time.Now().Add(time.Duration(a.tokenDuration) * time.Hour)
+	if err != nil {
+		return nil, fmt.Errorf("invalid refresh token: %w", err)
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	// Verify it's a refresh token
+	tokenType, ok := claims["token_type"].(string)
+	if !ok || tokenType != "refresh" {
+		return nil, fmt.Errorf("token is not a refresh token")
+	}
+
+	// Extract user ID
+	userID, ok := claims["user_id"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("invalid user ID in token")
+	}
+
+	// Hash the refresh token to look up in database
+	tokenHash := utils.HashSHA256(refreshToken)
+
+	// Find the session by refresh token hash
+	session, err := a.sessionRepo.GetByRefreshTokenHash(tokenHash)
+	if err != nil {
+		return nil, fmt.Errorf("invalid or expired refresh token")
+	}
+
+	// Verify the session belongs to the user
+	if session.UserID != int(userID) {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	// Get the user
+	user, err := a.userRepo.GetByID(int(userID))
+	if err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	// Check if user is still active
+	if !user.IsActive {
+		return nil, fmt.Errorf("account is deactivated")
+	}
+
+	// Generate a new access token
+	newAccessToken, newAccessExpiresAt, err := a.generateToken(user, "access")
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate new access token: %w", err)
+	}
+
+	// Update the session with the new access token
+	newAccessTokenHash := utils.HashSHA256(newAccessToken)
+	err = a.sessionRepo.UpdateAccessToken(session.ID, newAccessTokenHash, newAccessExpiresAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update session: %w", err)
+	}
+
+	// Return the new access token
+	refreshResponse := &response.RefreshTokenResponseDTO{
+		AccessToken:          newAccessToken,
+		AccessTokenExpiresAt: newAccessExpiresAt,
+	}
+
+	return refreshResponse, nil
+}
+
+// generateToken generates a JWT token (access or refresh)
+func (a AuthService) generateToken(user *models.User, tokenType string) (string, time.Time, error) {
+	var expirationTime time.Time
+
+	if tokenType == "access" {
+		expirationTime = time.Now().Add(time.Duration(a.accessTokenDuration) * time.Minute)
+	} else if tokenType == "refresh" {
+		expirationTime = time.Now().Add(time.Duration(a.refreshTokenDuration) * 24 * time.Hour)
+	} else {
+		return "", time.Time{}, fmt.Errorf("invalid token type: %s", tokenType)
+	}
 
 	claims := &models.Claims{
-		UserID:   user.ID,
-		Username: user.Username,
-		Email:    user.Email,
+		UserID:    user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
+		TokenType: tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -218,7 +333,6 @@ func (a AuthService) generateJWT(user *models.User) (string, time.Time, error) {
 	}
 
 	return tokenString, expirationTime, nil
-
 }
 
 func (a AuthService) Introspect(tokenString string) (*response.IntrospectResponse, error) {
@@ -240,7 +354,13 @@ func (a AuthService) Introspect(tokenString string) (*response.IntrospectRespons
 		return nil, fmt.Errorf("invalid token claims")
 	}
 
-	userID, ok := claims["UserID"].(float64)
+	// Verify it's an access token (not a refresh token)
+	tokenType, ok := claims["token_type"].(string)
+	if !ok || tokenType != "access" {
+		return nil, fmt.Errorf("token is not an access token")
+	}
+
+	userID, ok := claims["user_id"].(float64)
 
 	if !ok {
 		return nil, fmt.Errorf("invalid user ID in token")

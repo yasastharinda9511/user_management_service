@@ -9,23 +9,25 @@ import (
 )
 
 type Config struct {
-	Port           string
-	DatabaseURL    string
-	JWTSecret      string
-	TokenDuration  int // in hours
-	BCryptCost     int
-	Environment    string
-	AllowedOrigins []string
+	Port                 string
+	DatabaseURL          string
+	JWTSecret            string
+	AccessTokenDuration  int // in minutes
+	RefreshTokenDuration int // in days
+	BCryptCost           int
+	Environment          string
+	AllowedOrigins       []string
 }
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:           getEnv("PORT", "8080"),
-		JWTSecret:      getEnv("JWT_SECRET", utils.GenerateSecureJWTSecret()),
-		TokenDuration:  getEnvAsInt("TOKEN_DURATION", 24),
-		BCryptCost:     getEnvAsInt("BCRYPT_COST", 12),
-		Environment:    getEnv("ENVIRONMENT", "development"),
-		AllowedOrigins: getEnvAsSlice("ALLOWED_ORIGINS", []string{"*"}),
+		Port:                 getEnv("PORT", "8080"),
+		JWTSecret:            getEnv("JWT_SECRET", utils.GenerateSecureJWTSecret()),
+		AccessTokenDuration:  getEnvAsInt("ACCESS_TOKEN_DURATION", 15), // 15 minutes default
+		RefreshTokenDuration: getEnvAsInt("REFRESH_TOKEN_DURATION", 7), // 7 days default
+		BCryptCost:           getEnvAsInt("BCRYPT_COST", 12),
+		Environment:          getEnv("ENVIRONMENT", "development"),
+		AllowedOrigins:       getEnvAsSlice("ALLOWED_ORIGINS", []string{"*"}),
 	}
 
 	// Build database URL

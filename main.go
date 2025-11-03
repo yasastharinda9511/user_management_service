@@ -43,7 +43,7 @@ func main() {
 
 	// Initialize services
 	userService := serviceImpl.NewUserService(userRepo)
-	authService := serviceImpl.NewAuthService(userRepo, sessionRepo, roleRepo, permissionRepo, cfg.JWTSecret, cfg.TokenDuration, 12)
+	authService := serviceImpl.NewAuthService(userRepo, sessionRepo, roleRepo, permissionRepo, cfg.JWTSecret, cfg.AccessTokenDuration, cfg.RefreshTokenDuration, cfg.BCryptCost)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
@@ -59,6 +59,7 @@ func main() {
 	// Public routes
 	api.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
 	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
 	api.HandleFunc("/health", healthCheck).Methods("GET")
 
 	// Protected routes
