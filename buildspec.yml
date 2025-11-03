@@ -51,7 +51,6 @@ phases:
       - docker build -f Docker/Dockerfile -t $IMAGE_REPO_NAME:$IMAGE_TAG .
       - echo "[+] Tagging Docker image for ECR..."
       - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $ECR_URI/$IMAGE_REPO_NAME:$IMAGE_TAG
-      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $ECR_URI/$IMAGE_REPO_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
 
   post_build:
     commands:
