@@ -32,13 +32,14 @@ func Load() (*Config, error) {
 
 	// Build database URL
 	dbHost := getEnv("DB_HOST", "localhost")
-	dbPort := getEnv("DB_PORT", "3306")
+	dbPort := getEnv("DB_PORT", "5432")
 	dbUser := getEnv("DB_USER", "root")
 	dbPassword := getEnv("DB_PASSWORD", "password")
 	dbName := getEnv("DB_NAME", "user_management")
+	dbSSLMode := getEnv("DB_SSL_MODE", "disable")
 
-	cfg.DatabaseURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=userManagement,public",
-		dbUser, dbPassword, dbHost, dbPort, dbName)
+	cfg.DatabaseURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&search_path=userManagement,public",
+		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode)
 
 	// Validate required fields
 	fmt.Println(cfg.JWTSecret)

@@ -24,6 +24,7 @@ func main() {
 
 	// Connect to database
 	db, err := sql.Open("postgres", cfg.DatabaseURL)
+	log.Printf(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
