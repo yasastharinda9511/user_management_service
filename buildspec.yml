@@ -11,8 +11,7 @@ env:
 phases:
   install:
     runtime-versions:
-      golang: 1.23                                  # Use Go runtime
-      docker: 20                                    # Docker for building images
+      golang: 1.23                                  # Use Go runtime                              # Docker for building images
     commands:
       - echo "[+] Installing dependencies..."
       - go version
