@@ -45,7 +45,7 @@ func main() {
 	// Initialize services
 	userService := serviceImpl.NewUserService(userRepo)
 	authService := serviceImpl.NewAuthService(userRepo, sessionRepo, roleRepo, permissionRepo, cfg.JWTSecret, cfg.AccessTokenDuration, cfg.RefreshTokenDuration, cfg.BCryptCost)
-	roleService := serviceImpl.NewRoleService(roleRepo)
+	roleService := serviceImpl.NewRoleService(roleRepo, permissionRepo)
 	permissionService := serviceImpl.NewPermissionService(permissionRepo)
 
 	// Initialize handlers
@@ -81,6 +81,8 @@ func main() {
 
 	// Role management protected routes
 	api.Handle("/roles", authMiddleware.Authenticate(http.HandlerFunc(roleHandler.GetAllRoles))).Methods("GET")
+	api.Handle("/roles", authMiddleware.Authenticate(http.HandlerFunc(roleHandler.CreateRole))).Methods("POST")
+	api.Handle("/roles/{id:[0-9]+}", authMiddleware.Authenticate(http.HandlerFunc(roleHandler.UpdateRole))).Methods("PUT")
 
 	// Permission management protected routes
 	api.Handle("/permissions", authMiddleware.Authenticate(http.HandlerFunc(permissionHandler.GetAllPermissions))).Methods("GET")

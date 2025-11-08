@@ -2,6 +2,7 @@ package repositoryImpl
 
 import (
 	"database/sql"
+	"fmt"
 	"user_management_service/dto/response"
 	"user_management_service/models"
 	"user_management_service/repository"
@@ -88,6 +89,86 @@ func (r RolesRepository) GetUserRoles(userID int) ([]models.Role, error) {
 
 	return roles, nil
 
+}
+
+func (r RolesRepository) GetByID(roleID int) (*models.Role, error) {
+	query := `
+		SELECT id, name, description, created_at
+		FROM userManagement.roles
+		WHERE id = $1`
+
+	var role models.Role
+	err := r.db.QueryRow(query, roleID).Scan(&role.ID, &role.Name, &role.Description, &role.CreatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("role not found")
+		}
+		return nil, err
+	}
+
+	return &role, nil
+}
+
+func (r RolesRepository) Create(name, description string) (*models.Role, error) {
+	query := `
+		INSERT INTO userManagement.roles (name, description)
+		VALUES ($1, $2)
+		RETURNING id, name, description, created_at`
+
+	var role models.Role
+	err := r.db.QueryRow(query, name, description).Scan(&role.ID, &role.Name, &role.Description, &role.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create role: %w", err)
+	}
+
+	return &role, nil
+}
+
+func (r RolesRepository) Update(roleID int, name, description string) (*models.Role, error) {
+	query := `
+		UPDATE userManagement.roles
+		SET name = $1, description = $2
+		WHERE id = $3
+		RETURNING id, name, description, created_at`
+
+	var role models.Role
+	err := r.db.QueryRow(query, name, description, roleID).Scan(&role.ID, &role.Name, &role.Description, &role.CreatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("role not found")
+		}
+		return nil, fmt.Errorf("failed to update role: %w", err)
+	}
+
+	return &role, nil
+}
+
+func (r RolesRepository) AssignPermissionsToRole(roleID int, permissionIDs []int) error {
+	// Insert permissions for this role
+	for _, permissionID := range permissionIDs {
+		query := `
+			INSERT INTO userManagement.role_permissions (role_id, permission_id)
+			VALUES ($1, $2)
+			ON CONFLICT (role_id, permission_id) DO NOTHING`
+
+		_, err := r.db.Exec(query, roleID, permissionID)
+		if err != nil {
+			return fmt.Errorf("failed to assign permission %d to role: %w", permissionID, err)
+		}
+	}
+
+	return nil
+}
+
+func (r RolesRepository) RemoveAllPermissionsFromRole(roleID int) error {
+	query := `DELETE FROM userManagement.role_permissions WHERE role_id = $1`
+
+	_, err := r.db.Exec(query, roleID)
+	if err != nil {
+		return fmt.Errorf("failed to remove permissions from role: %w", err)
+	}
+
+	return nil
 }
 
 func NewRoleRepository(db *sql.DB, permissionRepo repository.PermissionRepository) repository.RoleRepository {

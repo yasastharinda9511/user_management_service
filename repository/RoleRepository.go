@@ -7,6 +7,11 @@ import (
 
 type RoleRepository interface {
 	GetAll() ([]response.RoleWithPermissionsDTO, error)
+	GetByID(roleID int) (*models.Role, error)
+	Create(name, description string) (*models.Role, error)
+	Update(roleID int, name, description string) (*models.Role, error)
+	AssignPermissionsToRole(roleID int, permissionIDs []int) error
+	RemoveAllPermissionsFromRole(roleID int) error
 	//GetByName(name string) (*models.Role, error)
 	//List() ([]models.Role, error)
 	GetUserRoles(userID int) ([]models.Role, error)
