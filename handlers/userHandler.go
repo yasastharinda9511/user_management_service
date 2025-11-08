@@ -164,3 +164,34 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 		"message": "User Deactivated successfully",
 	})
 }
+
+func (h *UserHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r) // get path variables
+	idStr := vars["id"] // extract user ID
+
+	id, err := strconv.Atoi(idStr) // convert to int
+	if err != nil {
+		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	newStatus, err := h.userService.ToggleUserStatus(id)
+	if err != nil {
+		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	statusText := "deactivated"
+	if newStatus {
+		statusText = "activated"
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":   "User status toggled successfully",
+		"is_active": newStatus,
+		"status":    statusText,
+	})
+}

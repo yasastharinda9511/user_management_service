@@ -17,4 +17,5 @@ type UserRepository interface {
 	//Count() (int, error)
 	UpdateLastLogin(userID int) error
 	Deactivate(userID int) error
+	ToggleStatus(userID int) (bool, error)
 }

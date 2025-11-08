@@ -73,6 +73,7 @@ func main() {
 	api.Handle("/users/email/{email:[a-zA-Z0-9._%+-@]+}", authMiddleware.Authenticate(http.HandlerFunc(userHandler.GetUserByEmail))).Methods("GET")
 	api.Handle("/users/id/{id:[0-9]+}", authMiddleware.Authenticate(http.HandlerFunc(userHandler.GetUserByUserID))).Methods("GET")
 	api.Handle("/users/{id:[0-9]+}/deactivate", authMiddleware.Authenticate(http.HandlerFunc(userHandler.DeactivateUser))).Methods("PUT")
+	api.Handle("/users/{id:[0-9]+}/toggle", authMiddleware.Authenticate(http.HandlerFunc(userHandler.ToggleUserStatus))).Methods("PUT")
 
 	// Start server
 	cors := config.CorsConfig{cfg.AllowedOrigins}

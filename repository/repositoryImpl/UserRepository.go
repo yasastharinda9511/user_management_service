@@ -252,3 +252,36 @@ func (r *userRepository) Deactivate(userID int) error {
 
 	return nil
 }
+
+// ToggleStatus toggles the active status of a user account
+func (r *userRepository) ToggleStatus(userID int) (bool, error) {
+	// First, get the current status
+	var currentStatus bool
+	query := `SELECT is_active FROM userManagement.users WHERE id = $1`
+	err := r.db.QueryRow(query, userID).Scan(&currentStatus)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, fmt.Errorf("user not found")
+		}
+		return false, fmt.Errorf("failed to get user status: %w", err)
+	}
+
+	// Toggle the status
+	newStatus := !currentStatus
+	updateQuery := `UPDATE userManagement.users SET is_active = $1, updated_at = NOW() WHERE id = $2`
+	result, err := r.db.Exec(updateQuery, newStatus, userID)
+	if err != nil {
+		return false, fmt.Errorf("failed to toggle user status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to check affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return false, fmt.Errorf("user not found")
+	}
+
+	return newStatus, nil
+}

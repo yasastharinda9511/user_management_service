@@ -12,4 +12,5 @@ type UserService interface {
 	GetUserByEmail(email string) (*models.User, error)
 	GetAllUsers() ([]models.User, error)
 	Deactivate(userID int) error
+	ToggleUserStatus(userID int) (bool, error)
 }

@@ -104,3 +104,13 @@ func (s *UserService) Deactivate(userID int) error {
 
 	return nil
 }
+
+func (s *UserService) ToggleUserStatus(userID int) (bool, error) {
+	newStatus, err := s.userRepo.ToggleStatus(userID)
+
+	if err != nil {
+		return false, fmt.Errorf("failed to toggle user status: %w", err)
+	}
+
+	return newStatus, nil
+}
