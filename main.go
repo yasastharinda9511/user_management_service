@@ -68,6 +68,7 @@ func main() {
 	api.Handle("/introspect", authMiddleware.Authenticate(http.HandlerFunc(authHandler.Introspect))).Methods("GET")
 
 	// User management protected routes
+	api.Handle("/users", authMiddleware.Authenticate(http.HandlerFunc(userHandler.GetAllUsers))).Methods("GET")
 	api.Handle("/users/username/{username:[a-zA-Z0-9._-]+}", authMiddleware.Authenticate(http.HandlerFunc(userHandler.GetUserByUsername))).Methods("GET")
 	api.Handle("/users/email/{email:[a-zA-Z0-9._%+-@]+}", authMiddleware.Authenticate(http.HandlerFunc(userHandler.GetUserByEmail))).Methods("GET")
 	api.Handle("/users/id/{id:[0-9]+}", authMiddleware.Authenticate(http.HandlerFunc(userHandler.GetUserByUserID))).Methods("GET")

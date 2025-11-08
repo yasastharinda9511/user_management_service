@@ -80,6 +80,21 @@ func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
 	return user, nil
 }
 
+func (s *UserService) GetAllUsers() ([]models.User, error) {
+	users, err := s.userRepo.GetAll()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all users: %w", err)
+	}
+
+	// Clear password hashes before returning
+	for i := range users {
+		users[i].PasswordHash = ""
+	}
+
+	return users, nil
+}
+
 func (s *UserService) Deactivate(userID int) error {
 	err := s.userRepo.Deactivate(userID)
 

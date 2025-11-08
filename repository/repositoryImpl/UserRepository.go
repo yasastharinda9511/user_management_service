@@ -114,6 +114,41 @@ func (r *userRepository) GetByEmail(email string) (*models.User, error) {
 	return user, nil
 }
 
+// GetAll retrieves all users
+func (r *userRepository) GetAll() ([]models.User, error) {
+	query := `
+		SELECT id, username, email, password_hash, first_name, last_name,
+		       phone, is_active, is_email_verified, created_at, updated_at, last_login
+		FROM userManagement.users
+		ORDER BY created_at DESC`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		var user models.User
+		err := rows.Scan(
+			&user.ID, &user.Username, &user.Email, &user.PasswordHash,
+			&user.FirstName, &user.LastName, &user.Phone, &user.IsActive,
+			&user.IsEmailVerified, &user.CreatedAt, &user.UpdatedAt, &user.LastLogin,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating users: %w", err)
+	}
+
+	return users, nil
+}
+
 // Update updates a user
 //func (r *userRepository) Update(user *models.User) error {
 //	query := `
