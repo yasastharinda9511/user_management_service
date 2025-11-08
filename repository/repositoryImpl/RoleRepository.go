@@ -2,12 +2,59 @@ package repositoryImpl
 
 import (
 	"database/sql"
+	"user_management_service/dto/response"
 	"user_management_service/models"
 	"user_management_service/repository"
 )
 
 type RolesRepository struct {
-	db *sql.DB
+	db             *sql.DB
+	permissionRepo repository.PermissionRepository
+}
+
+func (r RolesRepository) GetAll() ([]response.RoleWithPermissionsDTO, error) {
+	query := `
+		SELECT id, name, description, created_at
+		FROM userManagement.roles
+		ORDER BY name ASC`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rolesWithPermissions []response.RoleWithPermissionsDTO
+
+	for rows.Next() {
+		var role models.Role
+		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.CreatedAt); err != nil {
+			return nil, err
+		}
+
+		// Fetch permissions for this role
+		permissions, err := r.permissionRepo.GetByRoleID(role.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		roleWithPerms := response.RoleWithPermissionsDTO{
+			ID:          role.ID,
+			Name:        role.Name,
+			Description: role.Description,
+			CreatedAt:   role.CreatedAt,
+			Permissions: permissions,
+		}
+
+		rolesWithPermissions = append(rolesWithPermissions, roleWithPerms)
+	}
+
+	// check for iteration errors
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return rolesWithPermissions, nil
 }
 
 func (r RolesRepository) GetUserRoles(userID int) ([]models.Role, error) {
@@ -43,6 +90,9 @@ func (r RolesRepository) GetUserRoles(userID int) ([]models.Role, error) {
 
 }
 
-func NewRoleRepository(db *sql.DB) repository.RoleRepository {
-	return &RolesRepository{db: db}
+func NewRoleRepository(db *sql.DB, permissionRepo repository.PermissionRepository) repository.RoleRepository {
+	return &RolesRepository{
+		db:             db,
+		permissionRepo: permissionRepo,
+	}
 }

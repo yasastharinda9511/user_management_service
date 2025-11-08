@@ -1,8 +1,12 @@
 package repository
 
-import "user_management_service/models"
+import (
+	"user_management_service/dto/response"
+	"user_management_service/models"
+)
 
 type RoleRepository interface {
+	GetAll() ([]response.RoleWithPermissionsDTO, error)
 	//GetByName(name string) (*models.Role, error)
 	//List() ([]models.Role, error)
 	GetUserRoles(userID int) ([]models.Role, error)

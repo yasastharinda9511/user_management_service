@@ -39,16 +39,18 @@ func main() {
 	// Initialize repositories
 	userRepo := repositoryImpl.NewUserRepository(db)
 	sessionRepo := repositoryImpl.NewSessionRepository(db)
-	roleRepo := repositoryImpl.NewRoleRepository(db)
 	permissionRepo := repositoryImpl.NewPermissionRepository(db)
+	roleRepo := repositoryImpl.NewRoleRepository(db, permissionRepo)
 
 	// Initialize services
 	userService := serviceImpl.NewUserService(userRepo)
 	authService := serviceImpl.NewAuthService(userRepo, sessionRepo, roleRepo, permissionRepo, cfg.JWTSecret, cfg.AccessTokenDuration, cfg.RefreshTokenDuration, cfg.BCryptCost)
+	roleService := serviceImpl.NewRoleService(roleRepo)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
 	authHandler := handlers.NewAuthHandler(authService)
+	roleHandler := handlers.NewRoleHandler(roleService)
 
 	// Setup middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
@@ -74,6 +76,9 @@ func main() {
 	api.Handle("/users/id/{id:[0-9]+}", authMiddleware.Authenticate(http.HandlerFunc(userHandler.GetUserByUserID))).Methods("GET")
 	api.Handle("/users/{id:[0-9]+}/deactivate", authMiddleware.Authenticate(http.HandlerFunc(userHandler.DeactivateUser))).Methods("PUT")
 	api.Handle("/users/{id:[0-9]+}/toggle", authMiddleware.Authenticate(http.HandlerFunc(userHandler.ToggleUserStatus))).Methods("PUT")
+
+	// Role management protected routes
+	api.Handle("/roles", authMiddleware.Authenticate(http.HandlerFunc(roleHandler.GetAllRoles))).Methods("GET")
 
 	// Start server
 	cors := config.CorsConfig{cfg.AllowedOrigins}
