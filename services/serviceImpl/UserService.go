@@ -105,6 +105,50 @@ func (s *UserService) Deactivate(userID int) error {
 	return nil
 }
 
+func (s *UserService) UpdateUser(userID int, req *request.UpdateUserRequest) (*models.User, error) {
+	// Validate input
+	if req.FirstName == "" || req.LastName == "" || req.Email == "" {
+		return nil, fmt.Errorf("first_name, last_name, and email are required")
+	}
+
+	// Check if user exists and get current data
+	existingUser, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	// Determine is_active value (use provided value or keep existing)
+	isActive := existingUser.IsActive
+	if req.IsActive != nil {
+		isActive = *req.IsActive
+	}
+
+	// Update user information
+	user, err := s.userRepo.Update(userID, req.FirstName, req.LastName, req.Phone, req.Email, isActive)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	// Handle role assignment if role_id is provided
+	if req.RoleID != nil {
+		// Remove all existing roles
+		err = s.userRepo.RemoveAllRolesFromUser(userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to remove existing roles: %w", err)
+		}
+
+		// Assign new role
+		err = s.userRepo.AssignRoleToUser(userID, *req.RoleID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to assign role to user: %w", err)
+		}
+	}
+
+	// Clear password hash before returning
+	user.PasswordHash = ""
+	return user, nil
+}
+
 func (s *UserService) ToggleUserStatus(userID int) (bool, error) {
 	newStatus, err := s.userRepo.ToggleStatus(userID)
 

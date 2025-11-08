@@ -11,7 +11,9 @@ type UserRepository interface {
 	GetByUsername(username string) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)
 	GetAll() ([]models.User, error)
-	//Update(user *models.User) error
+	Update(userID int, firstName, lastName, phone, email string, isActive bool) (*models.User, error)
+	AssignRoleToUser(userID, roleID int) error
+	RemoveAllRolesFromUser(userID int) error
 	//Delete(id int) error
 	//List(offset, limit int) ([]models.User, error)
 	//Count() (int, error)

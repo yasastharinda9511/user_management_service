@@ -165,6 +165,47 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Get user ID from URL
+	vars := mux.Vars(r)
+	idStr := vars["id"]
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Parse request body
+	var req request.UpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid JSON format"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Validate request
+	if req.FirstName == "" || req.LastName == "" || req.Email == "" {
+		http.Error(w, `{"error": "first_name, last_name, and email are required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Call service
+	user, err := h.userService.UpdateUser(id, &req)
+	if err != nil {
+		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Return success response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "User updated successfully",
+		"user":    user,
+	})
+}
+
 func (h *UserHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

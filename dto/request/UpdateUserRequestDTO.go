@@ -5,4 +5,6 @@ type UpdateUserRequest struct {
 	LastName  string `json:"last_name" validate:"required,min=1,max=50"`
 	Phone     string `json:"phone" validate:"max=20"`
 	Email     string `json:"email" validate:"required,email"`
+	IsActive  *bool  `json:"is_active"`
+	RoleID    *int   `json:"role_id"`
 }

@@ -285,3 +285,55 @@ func (r *userRepository) ToggleStatus(userID int) (bool, error) {
 
 	return newStatus, nil
 }
+
+// Update updates a user's information
+func (r *userRepository) Update(userID int, firstName, lastName, phone, email string, isActive bool) (*models.User, error) {
+	query := `
+		UPDATE userManagement.users
+		SET first_name = $1, last_name = $2, phone = $3, email = $4, is_active = $5, updated_at = NOW()
+		WHERE id = $6
+		RETURNING id, username, email, password_hash, first_name, last_name, phone, is_active, is_email_verified, created_at, updated_at, last_login`
+
+	var user models.User
+	err := r.db.QueryRow(query, firstName, lastName, phone, email, isActive, userID).Scan(
+		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
+		&user.FirstName, &user.LastName, &user.Phone, &user.IsActive,
+		&user.IsEmailVerified, &user.CreatedAt, &user.UpdatedAt, &user.LastLogin,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return &user, nil
+}
+
+// AssignRoleToUser assigns a role to a user
+func (r *userRepository) AssignRoleToUser(userID, roleID int) error {
+	query := `
+		INSERT INTO userManagement.user_roles (user_id, role_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, role_id) DO NOTHING`
+
+	_, err := r.db.Exec(query, userID, roleID)
+	if err != nil {
+		return fmt.Errorf("failed to assign role to user: %w", err)
+	}
+
+	return nil
+}
+
+// RemoveAllRolesFromUser removes all roles from a user
+func (r *userRepository) RemoveAllRolesFromUser(userID int) error {
+	query := `DELETE FROM userManagement.user_roles WHERE user_id = $1`
+
+	_, err := r.db.Exec(query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to remove roles from user: %w", err)
+	}
+
+	return nil
+}
