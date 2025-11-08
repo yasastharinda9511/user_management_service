@@ -10,6 +10,40 @@ type PermissionRepository struct {
 	db *sql.DB
 }
 
+func (p PermissionRepository) GetAll() ([]models.Permission, error) {
+	query := `
+        SELECT id, name, resource, action, description, created_at
+        FROM userManagement.permissions
+        ORDER BY resource, action, name`
+
+	rows, err := p.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+
+		}
+	}(rows)
+
+	var permissions []models.Permission
+	for rows.Next() {
+		var perm models.Permission
+		if err := rows.Scan(&perm.ID, &perm.Name, &perm.Resource, &perm.Action, &perm.Description, &perm.CreatedAt); err != nil {
+			return nil, err
+		}
+		permissions = append(permissions, perm)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return permissions, nil
+}
+
 func (p PermissionRepository) GetUserPermissions(userID int) ([]models.Permission, error) {
 	query := `
         SELECT DISTINCT p.id, p.name, p.resource, p.action, p.description, p.created_at
