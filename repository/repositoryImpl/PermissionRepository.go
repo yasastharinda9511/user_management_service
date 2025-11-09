@@ -2,6 +2,7 @@ package repositoryImpl
 
 import (
 	"database/sql"
+	"fmt"
 	"user_management_service/models"
 	"user_management_service/repository"
 )
@@ -116,6 +117,24 @@ func (p PermissionRepository) GetByRoleID(roleID int) ([]models.Permission, erro
 	}
 
 	return permissions, nil
+}
+
+func (p PermissionRepository) Create(name, resource, action, description string) (*models.Permission, error) {
+	query := `
+        INSERT INTO userManagement.permissions (name, resource, action, description)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, name, resource, action, description, created_at`
+
+	var permission models.Permission
+	err := p.db.QueryRow(query, name, resource, action, description).Scan(
+		&permission.ID, &permission.Name, &permission.Resource, &permission.Action,
+		&permission.Description, &permission.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create permission: %w", err)
+	}
+
+	return &permission, nil
 }
 
 func NewPermissionRepository(db *sql.DB) repository.PermissionRepository {

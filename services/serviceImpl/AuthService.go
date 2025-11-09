@@ -102,14 +102,25 @@ func (a AuthService) Login(req request.LoginRequestDTO) (*response.LoginResponse
 		fmt.Printf("Warning: failed to update last login for user %d: %v\n", user.ID, err)
 	}
 
-	// Generate access token
-	accessToken, accessExpiresAt, err := a.generateToken(user, "access")
+	// Fetch roles and permissions before generating tokens
+	roles, err := a.rolesRepo.GetUserRoles(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get roles for user %d: %w", user.ID, err)
+	}
+
+	permissions, err := a.permissionRepo.GetUserPermissions(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get permissions for user %d: %w", user.ID, err)
+	}
+
+	// Generate access token with roles and permissions
+	accessToken, accessExpiresAt, err := a.generateToken(user, "access", roles, permissions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	// Generate refresh token
-	refreshToken, refreshExpiresAt, err := a.generateToken(user, "refresh")
+	// Generate refresh token with roles and permissions
+	refreshToken, refreshExpiresAt, err := a.generateToken(user, "refresh", roles, permissions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
@@ -135,18 +146,6 @@ func (a AuthService) Login(req request.LoginRequestDTO) (*response.LoginResponse
 			fmt.Printf("Warning: failed to cleanup expired sessions for user %d: %v\n", user.ID, err)
 		}
 	}()
-
-	roles, err := a.rolesRepo.GetUserRoles(user.ID)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get roles for user %d: %w", user.ID, err)
-	}
-
-	permissions, err := a.permissionRepo.GetUserPermissions(user.ID)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get permissions for user %d: %w", user.ID, err)
-	}
 
 	loginResponse := response.LoginResponseDTO{
 		AccessToken:           accessToken,
@@ -278,8 +277,19 @@ func (a AuthService) RefreshToken(refreshToken string) (*response.RefreshTokenRe
 		return nil, fmt.Errorf("account is deactivated")
 	}
 
-	// Generate a new access token
-	newAccessToken, newAccessExpiresAt, err := a.generateToken(user, "access")
+	// Fetch roles and permissions for the new access token
+	roles, err := a.rolesRepo.GetUserRoles(int(userID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get roles for user %d: %w", int(userID), err)
+	}
+
+	permissions, err := a.permissionRepo.GetUserPermissions(int(userID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get permissions for user %d: %w", int(userID), err)
+	}
+
+	// Generate a new access token with roles and permissions
+	newAccessToken, newAccessExpiresAt, err := a.generateToken(user, "access", roles, permissions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate new access token: %w", err)
 	}
@@ -301,7 +311,7 @@ func (a AuthService) RefreshToken(refreshToken string) (*response.RefreshTokenRe
 }
 
 // generateToken generates a JWT token (access or refresh)
-func (a AuthService) generateToken(user *models.User, tokenType string) (string, time.Time, error) {
+func (a AuthService) generateToken(user *models.User, tokenType string, roles []models.Role, permissions []models.Permission) (string, time.Time, error) {
 	var expirationTime time.Time
 
 	if tokenType == "access" {
@@ -313,10 +323,12 @@ func (a AuthService) generateToken(user *models.User, tokenType string) (string,
 	}
 
 	claims := &models.Claims{
-		UserID:    user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		TokenType: tokenType,
+		UserID:      user.ID,
+		Username:    user.Username,
+		Email:       user.Email,
+		TokenType:   tokenType,
+		Roles:       roles,
+		Permissions: permissions,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

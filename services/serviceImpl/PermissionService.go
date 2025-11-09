@@ -2,6 +2,7 @@ package serviceImpl
 
 import (
 	"fmt"
+	"user_management_service/dto/request"
 	"user_management_service/models"
 	"user_management_service/repository"
 	"user_management_service/services"
@@ -23,4 +24,19 @@ func (s *PermissionService) GetAllPermissions() ([]models.Permission, error) {
 	}
 
 	return permissions, nil
+}
+
+func (s *PermissionService) CreatePermission(req *request.CreatePermissionRequestDTO) (*models.Permission, error) {
+	// Validate input
+	if req.Name == "" || req.Resource == "" || req.Action == "" {
+		return nil, fmt.Errorf("name, resource, and action are required")
+	}
+
+	// Create permission
+	permission, err := s.permissionRepo.Create(req.Name, req.Resource, req.Action, req.Description)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create permission: %w", err)
+	}
+
+	return permission, nil
 }
