@@ -11,11 +11,17 @@ import (
 )
 
 type UserService struct {
-	userRepo repository.UserRepository
+	userRepo       repository.UserRepository
+	roleRepo       repository.RoleRepository
+	permissionRepo repository.PermissionRepository
 }
 
-func NewUserService(userRepo repository.UserRepository) services.UserService {
-	return &UserService{userRepo}
+func NewUserService(userRepo repository.UserRepository, roleRepo repository.RoleRepository, permissionRepo repository.PermissionRepository) services.UserService {
+	return &UserService{
+		userRepo:       userRepo,
+		roleRepo:       roleRepo,
+		permissionRepo: permissionRepo,
+	}
 }
 
 func (s *UserService) CreateUser(req *request.CreateUserRequestDTO) (*models.User, error) {
@@ -80,19 +86,62 @@ func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
 	return user, nil
 }
 
-func (s *UserService) GetAllUsers() ([]models.User, error) {
+func (s *UserService) GetAllUsers() ([]map[string]interface{}, error) {
 	users, err := s.userRepo.GetAll()
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all users: %w", err)
 	}
 
-	// Clear password hashes before returning
-	for i := range users {
-		users[i].PasswordHash = ""
+	// Build response with roles and permissions
+	var usersWithRoles []map[string]interface{}
+	for _, user := range users {
+		// Clear password hash
+		user.PasswordHash = ""
+
+		// Fetch role for this user
+		roles, err := s.roleRepo.GetUserRoles(user.ID)
+		var roleWithPermissions interface{}
+
+		if err == nil && len(roles) > 0 {
+			role := roles[0] // User has single role
+
+			// Fetch permissions for this role
+			permissions, err := s.permissionRepo.GetByRoleID(role.ID)
+			if err != nil {
+				permissions = []models.Permission{} // Empty permissions on error
+			}
+
+			// Build role object with permissions
+			roleWithPermissions = map[string]interface{}{
+				"id":          role.ID,
+				"name":        role.Name,
+				"description": role.Description,
+				"created_at":  role.CreatedAt,
+				"permissions": permissions,
+			}
+		}
+
+		// Build user object with role
+		userMap := map[string]interface{}{
+			"id":                user.ID,
+			"username":          user.Username,
+			"email":             user.Email,
+			"first_name":        user.FirstName,
+			"last_name":         user.LastName,
+			"phone":             user.Phone,
+			"is_active":         user.IsActive,
+			"is_email_verified": user.IsEmailVerified,
+			"created_at":        user.CreatedAt,
+			"updated_at":        user.UpdatedAt,
+			"last_login":        user.LastLogin,
+			"role":              roleWithPermissions,
+		}
+
+		usersWithRoles = append(usersWithRoles, userMap)
 	}
 
-	return users, nil
+	return usersWithRoles, nil
 }
 
 func (s *UserService) Deactivate(userID int) error {

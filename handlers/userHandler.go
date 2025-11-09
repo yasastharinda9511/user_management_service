@@ -126,7 +126,7 @@ func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	users, err := h.userService.GetAllUsers()
+	usersWithRoles, err := h.userService.GetAllUsers()
 
 	if err != nil {
 		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
@@ -136,8 +136,8 @@ func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "Users retrieved successfully",
-		"users":   users,
-		"count":   len(users),
+		"users":   usersWithRoles,
+		"count":   len(usersWithRoles),
 	})
 }
 

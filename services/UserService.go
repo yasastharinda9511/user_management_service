@@ -10,7 +10,7 @@ type UserService interface {
 	GetUserByUsername(username string) (*models.User, error)
 	GetUserByID(id int) (*models.User, error)
 	GetUserByEmail(email string) (*models.User, error)
-	GetAllUsers() ([]models.User, error)
+	GetAllUsers() ([]map[string]interface{}, error)
 	UpdateUser(userID int, req *request.UpdateUserRequest) (*models.User, error)
 	Deactivate(userID int) error
 	ToggleUserStatus(userID int) (bool, error)
