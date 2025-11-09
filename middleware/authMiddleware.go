@@ -53,7 +53,7 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 
 		introspectResponse, err := m.auth.Introspect(token)
 		if err != nil {
-			m.internalErrorResponse(w, err.Error())
+			m.forbiddenResponse(w, err.Error())
 			return
 		}
 
