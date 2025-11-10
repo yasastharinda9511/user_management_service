@@ -8,4 +8,6 @@ type PermissionRepository interface {
 	GetByRoleID(roleID int) ([]models.Permission, error)
 	Create(name, resource, action, description string) (*models.Permission, error)
 	Update(permissionID int, name, description string) (*models.Permission, error)
+	HasRoleAssociations(permissionID int) (bool, error)
+	Delete(permissionID int) error
 }

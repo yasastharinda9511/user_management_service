@@ -159,6 +159,42 @@ func (p PermissionRepository) Update(permissionID int, name, description string)
 	return &permission, nil
 }
 
+func (p PermissionRepository) HasRoleAssociations(permissionID int) (bool, error) {
+	query := `
+        SELECT EXISTS(
+            SELECT 1 FROM userManagement.role_permissions
+            WHERE permission_id = $1
+        )`
+
+	var exists bool
+	err := p.db.QueryRow(query, permissionID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check role associations: %w", err)
+	}
+
+	return exists, nil
+}
+
+func (p PermissionRepository) Delete(permissionID int) error {
+	query := `DELETE FROM userManagement.permissions WHERE id = $1`
+
+	result, err := p.db.Exec(query, permissionID)
+	if err != nil {
+		return fmt.Errorf("failed to delete permission: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("permission not found")
+	}
+
+	return nil
+}
+
 func NewPermissionRepository(db *sql.DB) repository.PermissionRepository {
 	return &PermissionRepository{db: db}
 }

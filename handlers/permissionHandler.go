@@ -105,3 +105,33 @@ func (h *PermissionHandler) UpdatePermission(w http.ResponseWriter, r *http.Requ
 		"permission": permission,
 	})
 }
+
+func (h *PermissionHandler) DeletePermission(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Get permission ID from URL
+	vars := mux.Vars(r)
+	permissionID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, `{"error": "Invalid permission ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Call service
+	err = h.permissionService.DeletePermission(permissionID)
+	if err != nil {
+		// Check if it's an association error
+		if err.Error() == "cannot delete permission: it is currently assigned to one or more roles" {
+			http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusConflict)
+			return
+		}
+		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Return success response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Permission deleted successfully",
+	})
+}

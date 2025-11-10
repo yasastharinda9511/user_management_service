@@ -55,3 +55,23 @@ func (s *PermissionService) UpdatePermission(permissionID int, req *request.Upda
 
 	return permission, nil
 }
+
+func (s *PermissionService) DeletePermission(permissionID int) error {
+	// Check if permission has role associations
+	hasAssociations, err := s.permissionRepo.HasRoleAssociations(permissionID)
+	if err != nil {
+		return fmt.Errorf("failed to check permission associations: %w", err)
+	}
+
+	if hasAssociations {
+		return fmt.Errorf("cannot delete permission: it is currently assigned to one or more roles")
+	}
+
+	// Delete permission
+	err = s.permissionRepo.Delete(permissionID)
+	if err != nil {
+		return fmt.Errorf("failed to delete permission: %w", err)
+	}
+
+	return nil
+}

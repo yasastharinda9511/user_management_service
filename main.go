@@ -89,6 +89,7 @@ func main() {
 	api.Handle("/permissions", authMiddleware.Authenticate(http.HandlerFunc(permissionHandler.GetAllPermissions))).Methods("GET")
 	api.Handle("/permissions", authMiddleware.Authenticate(http.HandlerFunc(permissionHandler.CreatePermission))).Methods("POST")
 	api.Handle("/permissions/{id:[0-9]+}", authMiddleware.Authenticate(http.HandlerFunc(permissionHandler.UpdatePermission))).Methods("PUT")
+	api.Handle("/permissions/{id:[0-9]+}", authMiddleware.Authenticate(http.HandlerFunc(permissionHandler.DeletePermission))).Methods("DELETE")
 
 	// Start server
 	cors := config.CorsConfig{cfg.AllowedOrigins}
