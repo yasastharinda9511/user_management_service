@@ -7,4 +7,5 @@ type PermissionRepository interface {
 	GetUserPermissions(userID int) ([]models.Permission, error)
 	GetByRoleID(roleID int) ([]models.Permission, error)
 	Create(name, resource, action, description string) (*models.Permission, error)
+	Update(permissionID int, name, description string) (*models.Permission, error)
 }

@@ -40,3 +40,18 @@ func (s *PermissionService) CreatePermission(req *request.CreatePermissionReques
 
 	return permission, nil
 }
+
+func (s *PermissionService) UpdatePermission(permissionID int, req *request.UpdatePermissionRequestDTO) (*models.Permission, error) {
+	// Validate input
+	if req.Name == "" {
+		return nil, fmt.Errorf("name is required")
+	}
+
+	// Update permission
+	permission, err := s.permissionRepo.Update(permissionID, req.Name, req.Description)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update permission: %w", err)
+	}
+
+	return permission, nil
+}

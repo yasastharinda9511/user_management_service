@@ -137,6 +137,28 @@ func (p PermissionRepository) Create(name, resource, action, description string)
 	return &permission, nil
 }
 
+func (p PermissionRepository) Update(permissionID int, name, description string) (*models.Permission, error) {
+	query := `
+        UPDATE userManagement.permissions
+        SET name = $1, description = $2
+        WHERE id = $3
+        RETURNING id, name, resource, action, description, created_at`
+
+	var permission models.Permission
+	err := p.db.QueryRow(query, name, description, permissionID).Scan(
+		&permission.ID, &permission.Name, &permission.Resource, &permission.Action,
+		&permission.Description, &permission.CreatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("permission not found")
+		}
+		return nil, fmt.Errorf("failed to update permission: %w", err)
+	}
+
+	return &permission, nil
+}
+
 func NewPermissionRepository(db *sql.DB) repository.PermissionRepository {
 	return &PermissionRepository{db: db}
 }

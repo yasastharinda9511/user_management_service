@@ -88,6 +88,7 @@ func main() {
 	// Permission management protected routes
 	api.Handle("/permissions", authMiddleware.Authenticate(http.HandlerFunc(permissionHandler.GetAllPermissions))).Methods("GET")
 	api.Handle("/permissions", authMiddleware.Authenticate(http.HandlerFunc(permissionHandler.CreatePermission))).Methods("POST")
+	api.Handle("/permissions/{id:[0-9]+}", authMiddleware.Authenticate(http.HandlerFunc(permissionHandler.UpdatePermission))).Methods("PUT")
 
 	// Start server
 	cors := config.CorsConfig{cfg.AllowedOrigins}
