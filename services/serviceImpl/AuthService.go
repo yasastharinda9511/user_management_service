@@ -322,13 +322,25 @@ func (a AuthService) generateToken(user *models.User, tokenType string, roles []
 		return "", time.Time{}, fmt.Errorf("invalid token type: %s", tokenType)
 	}
 
+	// Format role as string (user has single role)
+	var roleName string
+	if len(roles) > 0 {
+		roleName = roles[0].Name
+	}
+
+	// Format permissions as []string in "resource.action" format
+	permissionStrings := make([]string, 0, len(permissions))
+	for _, perm := range permissions {
+		permissionStrings = append(permissionStrings, fmt.Sprintf("%s.%s", perm.Resource, perm.Action))
+	}
+
 	claims := &models.Claims{
 		UserID:      user.ID,
 		Username:    user.Username,
 		Email:       user.Email,
 		TokenType:   tokenType,
-		Roles:       roles,
-		Permissions: permissions,
+		Role:        roleName,
+		Permissions: permissionStrings,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
